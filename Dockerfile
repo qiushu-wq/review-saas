@@ -22,4 +22,8 @@ RUN mkdir -p /app/server/data
 
 EXPOSE 3002
 
+# Railway passes service variables as Docker build args
+ARG DEEPSEEK_API_KEY
+ENV DEEPSEEK_API_KEY=$DEEPSEEK_API_KEY
+
 CMD ["node", "server/index.js"]
