@@ -1,0 +1,9 @@
+{
+  "name": "review-saas",
+  "private": true,
+  "scripts": {
+    "build": "cd landing && npm install && npm run build",
+    "start": "node server/index.js",
+    "postinstall": "cd server && npm install"
+  }
+}
