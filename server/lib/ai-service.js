@@ -56,8 +56,11 @@ async function generateWithDeepSeek(reviewContent, storeName, productName, optio
     const systemPrompt = BASE_SYSTEM_PROMPT + '\n\n' + buildSystemPrompt(options || {})
     const userMessage = '差评内容：' + reviewContent + '\n店铺名称：' + (storeName || '未提供') + '\n商品/服务：' + (productName || '未提供')
 
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 20000)
     const response = await fetch('https://api.deepseek.com/chat/completions', {
       method: 'POST',
+      signal: controller.signal,
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer ' + apiKey,
@@ -80,6 +83,7 @@ async function generateWithDeepSeek(reviewContent, storeName, productName, optio
     }
 
     const data = await response.json()
+    clearTimeout(timeout)
     const replyText = data.choices?.[0]?.message?.content || ''
     if (!replyText) return null
 
@@ -91,7 +95,8 @@ async function generateWithDeepSeek(reviewContent, storeName, productName, optio
       provider: 'deepseek',
     }
   } catch (err) {
-    console.error('[AI:DeepSeek] Error:', err.message)
+    clearTimeout(timeout)
+    console.error('[AI:DeepSeek] Error:', err.name === 'AbortError' ? 'Timeout (20s)' : err.message)
     return null
   }
 }
