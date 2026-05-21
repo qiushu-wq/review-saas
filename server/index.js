@@ -62,6 +62,7 @@ app.get('*', (req, res) => {
 
 async function start() {
   await initDb()
+  console.log('RAILWAY env vars:', Object.keys(process.env).filter(k => k.includes('DEEPSEEK') || k.includes('RAILWAY')).join(', '))
   app.listen(PORT, () => {
     console.log(`\n🚀 差评自动回复生成器 SaaS`)
     console.log(`   API:      http://localhost:${PORT}/api`)
