@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>智评助手 · 管理后台</title>
+<script src="https://unpkg.com/vue@3.4/dist/vue.global.prod.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --primary: #FFB74D; --primary-dark: #F59E0B; --primary-light: #FFF3E0;
+  --sidebar: #2D3436; --sidebar-text: #B2BEC3; --sidebar-active: #fff;
+  --bg: #f5f5f5; --card: #fff; --border: #e9ecef;
+  --text: #2D3436; --text-secondary: #636E72; --success: #27ae60; --danger: #e74c3c; --warning: #f39c12;
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: var(--bg); color: var(--text); display: flex; min-height: 100vh; line-height: 1.6;
+}
+.sidebar {
+  width: 220px; background: var(--sidebar); color: #fff;
+  display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0; z-index: 10;
+}
+.sidebar-header {
+  padding: 24px 20px; font-size: 18px; font-weight: 700;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  display: flex; align-items: center; gap: 8px;
+}
+.sidebar-header .badge {
+  font-size: 10px; font-weight: 600; background: var(--primary); color: #fff;
+  padding: 2px 8px; border-radius: 10px; margin-left: auto;
+}
+.sidebar-nav { flex: 1; padding: 12px 0; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 20px; color: var(--sidebar-text); cursor: pointer;
+  font-size: 14px; transition: all .2s; border: none; background: none;
+  width: 100%; text-align: left; font-family: inherit;
+}
+.nav-item:hover { background: rgba(255,255,255,0.05); color: var(--sidebar-active); }
+.nav-item.active { background: rgba(255,183,77,0.15); color: var(--primary); border-right: 3px solid var(--primary); }
+.main { margin-left: 220px; flex: 1; padding: 32px; min-height: 100vh; }
+.page-title { font-size: 24px; font-weight: 700; margin-bottom: 24px; }
+
+/* Stats bar */
+.stats-bar {
+  display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap;
+}
+.stat-pill {
+  background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+  padding: 16px 24px; display: flex; align-items: center; gap: 16px; flex: 1; min-width: 160px;
+}
+.stat-pill .stat-icon { font-size: 28px; }
+.stat-pill .stat-info { }
+.stat-pill .stat-info .value { font-size: 24px; font-weight: 800; color: var(--primary-dark); line-height: 1.2; }
+.stat-pill .stat-info .label { font-size: 12px; color: var(--text-secondary); }
+
+/* Card */
+.card { background: var(--card); border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); padding: 24px; margin-bottom: 20px; border: 1px solid var(--border); }
+.card-title { font-size: 15px; font-weight: 600; margin-bottom: 16px; color: var(--text-secondary); }
+.card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.card-header .card-title { margin-bottom: 0; }
+
+/* Form */
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; color: var(--text-secondary); }
+.form-input { width: 100%; padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 14px; font-family: inherit; outline: none; }
+.form-input:focus { border-color: var(--primary); }
+select.form-input { appearance: auto; }
+
+/* Buttons */
+.btn { padding: 10px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; font-family: inherit; transition: all .2s; display: inline-flex; align-items: center; gap: 6px; }
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--primary-dark); }
+.btn-outline { background: transparent; border: 2px solid var(--primary); color: var(--primary-dark); }
+.btn-outline:hover { background: var(--primary-light); }
+.btn-sm { padding: 6px 14px; font-size: 12px; }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn-danger:hover { opacity: 0.9; }
+.btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text-secondary); }
+.btn-ghost:hover { background: #f5f5f5; }
+
+/* Table */
+.table-wrapper { overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; }
+.table th, .table td { text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 14px; white-space: nowrap; }
+.table th { font-weight: 600; color: var(--text-secondary); font-size: 13px; }
+.table tr:hover { background: #fafafa; }
+
+/* Plan tags */
+.plan-tag { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+.plan-free { background: #e9ecef; color: #636E72; }
+.plan-pro { background: #dbeafe; color: #2563eb; }
+.plan-enterprise { background: #fef3c7; color: #b45309; }
+
+/* Modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 100; }
+.modal { background: #fff; border-radius: 12px; padding: 32px; max-width: 480px; width: 90%; max-height: 80vh; overflow-y: auto; }
+.modal-title { font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+.modal-body { margin-bottom: 20px; }
+.modal-actions { display: flex; gap: 12px; justify-content: flex-end; }
+.modal-info-row { display: flex; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+.modal-info-row .label { color: var(--text-secondary); width: 100px; flex-shrink: 0; }
+.modal-info-row .value { color: var(--text); font-weight: 500; }
+
+/* Search bar */
+.search-bar { margin-bottom: 20px; }
+.search-bar input { max-width: 320px; }
+
+/* Toast */
+.toast { position: fixed; top: 20px; right: 20px; padding: 12px 20px; border-radius: 8px; color: #fff; font-size: 14px; z-index: 1000; animation: slideIn .3s; }
+.toast.success { background: var(--success); }
+.toast.error { background: var(--danger); }
+.toast.warning { background: var(--warning); }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+/* Empty state */
+.empty-state { text-align: center; padding: 48px 24px; color: var(--text-secondary); }
+.empty-state .empty-icon { font-size: 48px; margin-bottom: 12px; }
+
+/* Stats view */
+.stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+.stat-card { text-align: center; padding: 24px; }
+.stat-card .stat-value { font-size: 40px; font-weight: 800; color: var(--primary-dark); }
+.stat-card .stat-label { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+.chart-section { margin-bottom: 24px; }
+.chart-section h3 { font-size: 15px; font-weight: 600; margin-bottom: 12px; color: var(--text-secondary); }
+
+/* CSS bar chart */
+.bar-chart { display: flex; flex-direction: column; gap: 12px; }
+.bar-row { display: flex; align-items: center; gap: 12px; }
+.bar-label { width: 100px; font-size: 14px; font-weight: 500; color: var(--text); text-align: right; flex-shrink: 0; }
+.bar-track { flex: 1; height: 28px; background: #f0f0f0; border-radius: 6px; overflow: hidden; position: relative; }
+.bar-fill { height: 100%; border-radius: 6px; transition: width .6s ease; display: flex; align-items: center; justify-content: flex-end; padding-right: 8px; font-size: 12px; font-weight: 600; color: #fff; min-width: 40px; }
+.bar-count { font-size: 14px; font-weight: 600; color: var(--text-secondary); width: 40px; }
+
+/* Distribution grids */
+.dist-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.dist-card { }
+
+@media (max-width: 768px) {
+  .sidebar { width: 60px; }
+  .sidebar-header span, .sidebar-header .badge { display: none; }
+  .sidebar-header { justify-content: center; padding: 16px; }
+  .sidebar-header::after { content: none; }
+  .nav-item span { display: none; }
+  .main { margin-left: 60px; padding: 16px; }
+  .stats-grid { grid-template-columns: 1fr; }
+  .stats-bar { flex-direction: column; }
+  .dist-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- Login Page -->
+  <div v-if="!authenticated" style="max-width:400px;margin:80px auto;">
+    <div class="card" style="padding:40px;">
+      <h2 style="text-align:center;margin-bottom:8px;">🔐 管理后台</h2>
+      <p style="text-align:center;font-size:14px;color:var(--text-secondary);margin-bottom:24px;">智评助手 · 请输入管理员密码</p>
+      <div class="form-group">
+        <label>管理员密码</label>
+        <input class="form-input" v-model="adminKey" type="password" placeholder="Enter admin key" @keyup.enter="doLogin">
+      </div>
+      <p v-if="loginError" style="color:var(--danger);font-size:14px;margin-bottom:12px;text-align:center;">{{ loginError }}</p>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;" @click="doLogin" :disabled="!adminKey.trim()">
+        登录
+      </button>
+    </div>
+  </div>
+
+  <!-- Main App -->
+  <template v-if="authenticated">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <span>📊 智评助手</span>
+        <span class="badge">管理</span>
+      </div>
+      <div class="sidebar-nav">
+        <button class="nav-item" :class="{active: tab === 'merchants'}" @click="tab = 'merchants'">🏪 <span>商家列表</span></button>
+        <button class="nav-item" :class="{active: tab === 'stats'}" @click="tab = 'stats'">📈 <span>系统统计</span></button>
+      </div>
+      <div class="sidebar-nav" style="border-top:1px solid rgba(255,255,255,0.1);">
+        <button class="nav-item" @click="doLogout">🚪 <span>退出</span></button>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main">
+      <!-- Stats bar (always visible) -->
+      <div class="stats-bar">
+        <div class="stat-pill">
+          <div class="stat-icon">🏪</div>
+          <div class="stat-info">
+            <div class="value">{{ stats.totalMerchants }}</div>
+            <div class="label">总商家数</div>
+          </div>
+        </div>
+        <div class="stat-pill">
+          <div class="stat-icon">💬</div>
+          <div class="stat-info">
+            <div class="value">{{ stats.totalRepliesThisMonth }}</div>
+            <div class="label">本月回复</div>
+          </div>
+        </div>
+        <div class="stat-pill">
+          <div class="stat-icon">📅</div>
+          <div class="stat-info">
+            <div class="value">{{ totalRepliesAll }}</div>
+            <div class="label">累计回复</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: Merchants -->
+      <div v-if="tab === 'merchants'">
+        <div class="card-header">
+          <h2 class="page-title" style="margin-bottom:0;">🏪 商家列表</h2>
+          <button class="btn btn-ghost btn-sm" @click="refreshMerchants">🔄 刷新</button>
+        </div>
+        <div class="search-bar">
+          <input class="form-input" v-model="searchQuery" placeholder="🔍 搜索店铺名或邮箱..." @input="onSearch">
+        </div>
+        <div class="card">
+          <div class="table-wrapper">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>邮箱</th>
+                  <th>店铺名称</th>
+                  <th>类型</th>
+                  <th>套餐</th>
+                  <th>用量/额度</th>
+                  <th>回复总数</th>
+                  <th>注册时间</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-if="filteredMerchants.length === 0">
+                  <td colspan="9" style="text-align:center;padding:40px;color:var(--text-secondary);">暂无商家数据</td>
+                </tr>
+                <tr v-for="m in filteredMerchants" :key="m.id">
+                  <td>{{ m.id }}</td>
+                  <td>{{ m.email }}</td>
+                  <td><strong>{{ m.store_name || '-' }}</strong></td>
+                  <td>{{ m.store_type || '-' }}</td>
+                  <td>
+                    <span class="plan-tag" :class="planTagClass(m.plan)">{{ planLabel(m.plan) }}</span>
+                  </td>
+                  <td>
+                    <span :style="{color: m.used_this_month >= m.monthly_limit ? 'var(--danger)' : 'var(--text)'}">
+                      {{ m.used_this_month || 0 }}/{{ m.monthly_limit }}
+                    </span>
+                  </td>
+                  <td>{{ m.reply_count }}</td>
+                  <td>{{ formatDate(m.created_at) }}</td>
+                  <td>
+                    <button class="btn btn-primary btn-sm" @click="openEditModal(m)">编辑</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: Stats -->
+      <div v-if="tab === 'stats'">
+        <h2 class="page-title">📈 系统统计</h2>
+        <div class="stats-grid">
+          <div class="card stat-card">
+            <div class="stat-value">{{ stats.totalMerchants }}</div>
+            <div class="stat-label">总商家数</div>
+          </div>
+          <div class="card stat-card">
+            <div class="stat-value">{{ totalRepliesAll }}</div>
+            <div class="stat-label">总回复数</div>
+          </div>
+          <div class="card stat-card">
+            <div class="stat-value">{{ stats.totalRepliesThisMonth }}</div>
+            <div class="stat-label">本月回复数</div>
+          </div>
+        </div>
+
+        <div class="dist-grid">
+          <div class="card chart-section">
+            <h3>📊 套餐分布</h3>
+            <div class="bar-chart">
+              <div class="bar-row" v-for="item in planChartData" :key="item.label">
+                <span class="bar-label">{{ item.label }}</span>
+                <div class="bar-track">
+                  <div class="bar-fill" :style="{width: item.percent + '%', background: item.color}">
+                    {{ item.count }}
+                  </div>
+                </div>
+                <span class="bar-count">{{ item.count }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card chart-section">
+            <h3>🏷️ 店铺类型分布</h3>
+            <div class="bar-chart">
+              <div class="bar-row" v-for="item in typeChartData" :key="item.label">
+                <span class="bar-label">{{ item.label }}</span>
+                <div class="bar-track">
+                  <div class="bar-fill" :style="{width: item.percent + '%', background: item.color}">
+                    {{ item.count }}
+                  </div>
+                </div>
+                <span class="bar-count">{{ item.count }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div class="modal-overlay" v-if="editModal.visible" @click.self="closeEditModal">
+      <div class="modal">
+        <div class="modal-title">✏️ 编辑套餐</div>
+        <div class="modal-body">
+          <div class="modal-info-row">
+            <span class="label">商家 ID</span>
+            <span class="value">#{{ editModal.merchant.id }}</span>
+          </div>
+          <div class="modal-info-row">
+            <span class="label">邮箱</span>
+            <span class="value">{{ editModal.merchant.email }}</span>
+          </div>
+          <div class="modal-info-row">
+            <span class="label">店铺名称</span>
+            <span class="value">{{ editModal.merchant.store_name || '-' }}</span>
+          </div>
+          <div class="modal-info-row">
+            <span class="label">当前套餐</span>
+            <span class="value">
+              <span class="plan-tag" :class="planTagClass(editModal.merchant.plan)">{{ planLabel(editModal.merchant.plan) }}</span>
+            </span>
+          </div>
+          <div style="margin-top:20px;">
+            <div class="form-group">
+              <label>新套餐</label>
+              <select class="form-input" v-model="editModal.newPlan">
+                <option value="free">免费版 (50条/月)</option>
+                <option value="pro">专业版 (500条/月)</option>
+                <option value="enterprise">企业版 (无限条)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" @click="closeEditModal">取消</button>
+          <button class="btn btn-primary" @click="confirmEditPlan" :disabled="editModal.submitting">
+            {{ editModal.submitting ? '保存中...' : '确认修改' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast -->
+    <div v-if="toast.show" class="toast" :class="toast.type">{{ toast.message }}</div>
+  </template>
+</div>
+
+<script>
+const { createApp } = Vue
+
+createApp({
+  data() {
+    return {
+      authenticated: false,
+      adminKey: '',
+      loginError: '',
+      tab: 'merchants',
+      searchQuery: '',
+      merchants: [],
+      stats: { totalMerchants: 0, totalRepliesThisMonth: 0, plansDistribution: {}, merchantsByType: {} },
+      totalRepliesAll: 0,
+      editModal: {
+        visible: false,
+        merchant: {},
+        newPlan: 'free',
+        submitting: false,
+      },
+      toast: { show: false, type: 'success', message: '' },
+    }
+  },
+  computed: {
+    filteredMerchants() {
+      const q = this.searchQuery.trim().toLowerCase()
+      if (!q) return this.merchants
+      return this.merchants.filter(m =>
+        (m.store_name && m.store_name.toLowerCase().includes(q)) ||
+        (m.email && m.email.toLowerCase().includes(q))
+      )
+    },
+    planChartData() {
+      const dist = this.stats.plansDistribution || {}
+      const total = Object.values(dist).reduce((a, b) => a + b, 0) || 1
+      const colors = { free: '#636E72', pro: '#2563eb', enterprise: '#b45309' }
+      const labels = { free: '免费版', pro: '专业版', enterprise: '企业版' }
+      return Object.entries(dist).map(([key, count]) => ({
+        label: labels[key] || key,
+        count,
+        percent: Math.round((count / total) * 100),
+        color: colors[key] || '#999',
+      }))
+    },
+    typeChartData() {
+      const dist = this.stats.merchantsByType || {}
+      const total = Object.values(dist).reduce((a, b) => a + b, 0) || 1
+      const colors = ['#FFB74D', '#4FC3F7', '#81C784', '#E57373', '#BA68C8', '#FFD54F']
+      let i = 0
+      return Object.entries(dist).map(([key, count]) => ({
+        label: key,
+        count,
+        percent: Math.round((count / total) * 100),
+        color: colors[i++ % colors.length],
+      }))
+    },
+  },
+  methods: {
+    async api(path, options = {}) {
+      const headers = { 'X-Admin-Key': this.adminKey }
+      if (options.body) { headers['Content-Type'] = 'application/json' }
+      const res = await fetch(path, { ...options, headers })
+      if (res.status === 401) {
+        this.showToast('error', '登录已过期，请重新登录')
+        this.doLogout()
+        return null
+      }
+      return res.json()
+    },
+    doLogin() {
+      this.loginError = ''
+      if (!this.adminKey.trim()) { this.loginError = '请输入管理员密码'; return }
+      // Verify by calling merchants endpoint
+      fetch('/api/admin/merchants', { headers: { 'X-Admin-Key': this.adminKey } })
+        .then(res => {
+          if (res.ok) {
+            this.authenticated = true
+            localStorage.setItem('adminKey', this.adminKey)
+            this.loadData()
+          } else {
+            this.loginError = '密码错误，请重试'
+          }
+        })
+        .catch(() => { this.loginError = '无法连接服务器' })
+    },
+    doLogout() {
+      this.authenticated = false
+      this.adminKey = ''
+      localStorage.removeItem('adminKey')
+    },
+    async loadData() {
+      await Promise.all([this.refreshMerchants(), this.refreshStats()])
+    },
+    async refreshMerchants() {
+      const data = await this.api('/api/admin/merchants')
+      if (data) this.merchants = data
+    },
+    async refreshStats() {
+      const data = await this.api('/api/admin/stats')
+      if (data) {
+        this.stats = data
+        this.totalRepliesAll = this.merchants.reduce((sum, m) => sum + (m.reply_count || 0), 0)
+      }
+    },
+    onSearch() { /* computed property handles filtering */ },
+    openEditModal(merchant) {
+      this.editModal = {
+        visible: true,
+        merchant: { ...merchant },
+        newPlan: merchant.plan,
+        submitting: false,
+      }
+    },
+    closeEditModal() {
+      this.editModal.visible = false
+    },
+    async confirmEditPlan() {
+      this.editModal.submitting = true
+      const data = await this.api(`/api/admin/merchants/${this.editModal.merchant.id}/plan`, {
+        method: 'PUT',
+        body: JSON.stringify({ plan: this.editModal.newPlan }),
+      })
+      this.editModal.submitting = false
+      if (data && !data.error) {
+        this.showToast('success', `商家 #${this.editModal.merchant.id} 套餐已更新为 ${this.planLabel(this.editModal.newPlan)}`)
+        this.closeEditModal()
+        await this.refreshMerchants()
+        await this.refreshStats()
+      } else {
+        this.showToast('error', data?.error || '更新失败')
+      }
+    },
+    planLabel(plan) {
+      const labels = { free: '免费版', pro: '专业版', enterprise: '企业版' }
+      return labels[plan] || plan
+    },
+    planTagClass(plan) {
+      const map = { free: 'plan-free', pro: 'plan-pro', enterprise: 'plan-enterprise' }
+      return map[plan] || 'plan-free'
+    },
+    formatDate(dateStr) {
+      if (!dateStr) return '-'
+      try {
+        const d = new Date(dateStr)
+        return d.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }) +
+               ' ' + d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+      } catch { return dateStr }
+    },
+    showToast(type, message) {
+      this.toast = { show: true, type, message }
+      setTimeout(() => { this.toast.show = false }, 3000)
+    },
+  },
+  mounted() {
+    const saved = localStorage.getItem('adminKey')
+    if (saved) {
+      this.adminKey = saved
+      // Verify stored key
+      fetch('/api/admin/merchants', { headers: { 'X-Admin-Key': saved } })
+        .then(res => {
+          if (res.ok) {
+            this.authenticated = true
+            this.loadData()
+          } else {
+            localStorage.removeItem('adminKey')
+          }
+        })
+        .catch(() => { localStorage.removeItem('adminKey') })
+    }
+  },
+}).mount('#app')
+</script>
+</body>
+</html>

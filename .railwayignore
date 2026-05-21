@@ -1,0 +1,9 @@
+node_modules
+*.log
+.env
+.env.*
+.git
+.gitignore
+**/node_modules
+**/*.log
+server/data/review-saas.db

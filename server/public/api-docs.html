@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>智评助手 · API 文档</title>
+<script src="https://unpkg.com/vue@3.4/dist/vue.global.prod.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --primary: #FFB74D; --primary-dark: #F59E0B; --primary-light: #FFF3E0;
+  --sidebar: #2D3436; --sidebar-text: #B2BEC3; --sidebar-active: #fff;
+  --bg: #f5f5f5; --card: #fff; --border: #e9ecef;
+  --text: #2D3436; --text-secondary: #636E72; --success: #27ae60; --danger: #e74c3c;
+  --code-bg: #1e1e1e; --code-text: #d4d4d4;
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: var(--bg); color: var(--text); display: flex; min-height: 100vh; line-height: 1.6;
+}
+.sidebar {
+  width: 240px; background: var(--sidebar); color: #fff;
+  display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0; z-index: 10;
+}
+.sidebar-header {
+  padding: 24px 20px; font-size: 16px; font-weight: 700;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  display: flex; align-items: center; gap: 8px;
+}
+.sidebar-header .logo { font-size: 22px; }
+.sidebar-nav { flex: 1; padding: 8px 0; overflow-y: auto; }
+.nav-section-title {
+  padding: 16px 20px 6px; font-size: 11px; font-weight: 700;
+  color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 1px;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 20px; color: var(--sidebar-text); cursor: pointer;
+  font-size: 13px; transition: all .2s; border: none; background: none; width: 100%; text-align: left; font-family: inherit;
+}
+.nav-item:hover { background: rgba(255,255,255,0.05); color: var(--sidebar-active); }
+.nav-item.active { background: rgba(255,183,77,0.15); color: var(--primary); border-right: 3px solid var(--primary); }
+.nav-item .nav-icon { font-size: 14px; width: 20px; text-align: center; }
+.main { margin-left: 240px; flex: 1; padding: 40px; max-width: 960px; }
+.page-title { font-size: 28px; font-weight: 800; margin-bottom: 8px; }
+.page-subtitle { font-size: 14px; color: var(--text-secondary); margin-bottom: 32px; }
+.section { margin-bottom: 40px; }
+.section-title {
+  font-size: 20px; font-weight: 700; margin-bottom: 16px;
+  padding-bottom: 8px; border-bottom: 2px solid var(--primary);
+  display: flex; align-items: center; gap: 8px;
+}
+.section-title .section-icon { font-size: 20px; }
+.section-desc { font-size: 14px; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.8; }
+.card {
+  background: var(--card); border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+  padding: 24px; margin-bottom: 20px; border: 1px solid var(--border);
+}
+.card-title { font-size: 15px; font-weight: 600; margin-bottom: 12px; color: var(--text); }
+.card-subtitle { font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; }
+
+/* Endpoint badge */
+.endpoint { display: inline-block; padding: 4px 12px; border-radius: 4px; font-size: 12px; font-weight: 700; font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace; }
+.endpoint-post { background: #e8f5e9; color: #2e7d32; }
+.endpoint-get { background: #e3f2fd; color: #1565c0; }
+.endpoint-path { font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace; font-size: 13px; color: var(--text); margin-left: 8px; }
+
+/* Code blocks */
+.code-block {
+  background: var(--code-bg); border-radius: 8px; margin: 12px 0; overflow: hidden;
+  position: relative;
+}
+.code-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 16px; background: #2a2a2a; border-bottom: 1px solid #333;
+}
+.code-lang { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+.code-content {
+  padding: 16px; overflow-x: auto; font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Menlo', monospace;
+  font-size: 13px; line-height: 1.7; color: var(--code-text); tab-size: 2;
+}
+.code-content .keyword { color: #569cd6; }
+.code-content .string { color: #ce9178; }
+.code-content .comment { color: #6a9955; }
+.code-content .function { color: #dcdcaa; }
+.code-content .number { color: #b5cea8; }
+.code-content .property { color: #9cdcfe; }
+.code-content .operator { color: #d4d4d4; }
+.code-content .punctuation { color: #d4d4d4; }
+
+/* Copy button */
+.btn-copy {
+  padding: 4px 10px; font-size: 11px; border: 1px solid #444; border-radius: 4px;
+  background: transparent; color: #aaa; cursor: pointer; transition: all .2s; font-family: inherit;
+}
+.btn-copy:hover { border-color: var(--primary); color: var(--primary); background: rgba(255,183,77,0.1); }
+.btn-copy.copied { border-color: var(--success); color: var(--success); }
+
+/* Inline code */
+.inline-code {
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-size: 13px; color: #d63384;
+}
+
+/* Table */
+.table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+.table th, .table td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--border); font-size: 13px; }
+.table th { font-weight: 600; color: var(--text-secondary); font-size: 12px; background: #fafafa; }
+.table tr:last-child td { border-bottom: none; }
+
+/* Property table */
+.prop-table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
+.prop-table th { text-align: left; padding: 8px 12px; border-bottom: 2px solid var(--border); font-weight: 600; color: var(--text-secondary); font-size: 12px; background: #fafafa; }
+.prop-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+.prop-table .prop-name { font-family: 'SF Mono', 'Fira Code', monospace; font-weight: 600; color: var(--text); }
+.prop-table .prop-type { font-family: 'SF Mono', 'Fira Code', monospace; color: #1565c0; font-size: 12px; }
+.prop-table .prop-req { color: var(--danger); font-size: 11px; font-weight: 600; }
+.prop-table .prop-opt { color: var(--text-secondary); font-size: 11px; }
+.prop-table .prop-desc { color: var(--text-secondary); }
+
+/* Error code cards */
+.error-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.error-card {
+  padding: 16px; border-radius: 8px; border: 1px solid var(--border);
+  display: flex; align-items: flex-start; gap: 12px;
+}
+.error-code {
+  font-family: 'SF Mono', 'Fira Code', monospace; font-size: 18px; font-weight: 800;
+  min-width: 48px; line-height: 1;
+}
+.error-code-4xx { color: var(--primary-dark); }
+.error-code-5xx { color: var(--danger); }
+.error-info { flex: 1; }
+.error-name { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+.error-desc { font-size: 12px; color: var(--text-secondary); }
+
+/* Auth method card */
+.auth-card {
+  display: flex; align-items: flex-start; gap: 16px;
+  padding: 16px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 12px;
+  background: #fafafa;
+}
+.auth-icon { font-size: 24px; width: 36px; text-align: center; }
+.auth-content { flex: 1; }
+.auth-name { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+.auth-desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 6px; }
+.auth-header { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; background: #f0f0f0; padding: 6px 10px; border-radius: 4px; display: inline-block; }
+
+/* Toast */
+.toast {
+  position: fixed; top: 20px; right: 20px; padding: 10px 18px; border-radius: 8px;
+  color: #fff; font-size: 13px; z-index: 1000; animation: slideIn .3s;
+}
+.toast.success { background: var(--success); }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+/* Param inlne badge */
+.badge { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 11px; font-weight: 600; }
+.badge-req { background: #fde8e8; color: var(--danger); }
+.badge-opt { background: #f0f0f0; color: var(--text-secondary); }
+
+/* Scrollbar for code */
+.code-content::-webkit-scrollbar { height: 6px; }
+.code-content::-webkit-scrollbar-track { background: #2a2a2a; }
+.code-content::-webkit-scrollbar-thumb { background: #555; border-radius: 3px; }
+
+@media (max-width: 768px) {
+  .sidebar { width: 60px; }
+  .sidebar-header .logo-text { display: none; }
+  .sidebar-header { padding: 16px; justify-content: center; }
+  .nav-item span:not(.nav-icon) { display: none; }
+  .nav-item .nav-icon { font-size: 16px; width: auto; }
+  .nav-section-title { display: none; }
+  .main { margin-left: 60px; padding: 20px; }
+  .error-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <span class="logo">✍️</span>
+      <span class="logo-text">智评助手 · API 文档</span>
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-section-title">快速入门</div>
+      <button class="nav-item" :class="{ active: activeSection === 'auth' }" @click="activeSection = 'auth'">
+        <span class="nav-icon">🔐</span><span>认证方式</span>
+      </button>
+      <button class="nav-item" :class="{ active: activeSection === 'base' }" @click="activeSection = 'base'">
+        <span class="nav-icon">📡</span><span>基础信息</span>
+      </button>
+
+      <div class="nav-section-title">API 接口</div>
+      <button class="nav-item" :class="{ active: activeSection === 'generate' }" @click="activeSection = 'generate'">
+        <span class="nav-icon">🤖</span><span>生成回复</span>
+      </button>
+      <button class="nav-item" :class="{ active: activeSection === 'history' }" @click="activeSection = 'history'">
+        <span class="nav-icon">📋</span><span>查看历史</span>
+      </button>
+      <button class="nav-item" :class="{ active: activeSection === 'plan' }" @click="activeSection = 'plan'">
+        <span class="nav-icon">📦</span><span>套餐信息</span>
+      </button>
+
+      <div class="nav-section-title">参考</div>
+      <button class="nav-item" :class="{ active: activeSection === 'errors' }" @click="activeSection = 'errors'">
+        <span class="nav-icon">⚠️</span><span>错误码</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main">
+    <h1 class="page-title">📖 API 文档</h1>
+    <p class="page-subtitle">智评助手商家集成 API — 将智能差评回复能力无缝接入您的系统</p>
+
+    <!-- ======== 认证方式 ======== -->
+    <div class="section" v-show="activeSection === 'auth'" ref="section-auth">
+      <h2 class="section-title"><span class="section-icon">🔐</span> 认证方式</h2>
+      <p class="section-desc">
+        智评助手提供两种认证方式，分别适用于不同的使用场景。所有需要认证的接口必须在请求头中携带有效的凭证。
+      </p>
+
+      <h3 style="font-size:16px;font-weight:600;margin:24px 0 12px;">方式一：JWT Token（商家后台使用）</h3>
+      <div class="auth-card">
+        <div class="auth-icon">🛡️</div>
+        <div class="auth-content">
+          <div class="auth-name">Bearer Token</div>
+          <div class="auth-desc">登录商家后台后自动获取，适用于 Dashboard 内部调用。</div>
+          <div class="auth-header">Authorization: Bearer &lt;token&gt;</div>
+        </div>
+      </div>
+      <p class="section-desc">
+        Token 在登录时由服务端颁发，存储在 <span class="inline-code">localStorage</span> 中。
+        调用 API 时需在请求头中附带。Token 过期后需重新登录获取。
+      </p>
+
+      <h3 style="font-size:16px;font-weight:600;margin:24px 0 12px;">方式二：API Key（外部集成使用）</h3>
+      <div class="auth-card">
+        <div class="auth-icon">🔑</div>
+        <div class="auth-content">
+          <div class="auth-name">X-API-Key</div>
+          <div class="auth-desc">面向第三方系统集成，在 Dashboard 中创建并管理。</div>
+          <div class="auth-header">X-API-Key: &lt;your-api-key&gt;</div>
+        </div>
+      </div>
+      <p class="section-desc">
+        API Key 适用于您的自有系统、第三方平台或自动化脚本调用。
+        您可以在「商家后台 → 设置」页面中创建和管理 API Key。每个商家可创建多个 Key，支持随时吊销。
+      </p>
+      <div class="card" style="background:var(--primary-light);border-color:var(--primary);">
+        <p style="font-size: 13px; color: var(--text-secondary);">
+          💡 <strong>提示：</strong> 在 Dashboard 中创建的 API Key 请妥善保管，离开页面后将无法再次查看原文。
+          如怀疑 Key 泄露，请及时吊销并重新创建。
+        </p>
+      </div>
+    </div>
+
+    <!-- ======== 基础信息 ======== -->
+    <div class="section" v-show="activeSection === 'base'" ref="section-base">
+      <h2 class="section-title"><span class="section-icon">📡</span> 基础信息</h2>
+
+      <div class="card">
+        <table class="table">
+          <tr>
+            <th style="width:120px;">属性</th>
+            <th>值</th>
+          </tr>
+          <tr>
+            <td>Base URL</td>
+            <td><span class="inline-code">http://localhost:3002/api</span></td>
+          </tr>
+          <tr>
+            <td>数据格式</td>
+            <td>所有请求和响应均为 <span class="inline-code">application/json</span></td>
+          </tr>
+          <tr>
+            <td>字符编码</td>
+            <td>UTF-8</td>
+          </tr>
+          <tr>
+            <td>认证失败</td>
+            <td>返回 HTTP 状态码 <span class="inline-code">401</span></td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="card" style="background:var(--primary-light);border-color:var(--primary);">
+        <p style="font-size:13px;color:var(--text-secondary);">
+          💡 <strong>提示：</strong> 生产环境 Base URL 将替换为您的部署域名。
+          请在所有请求的 <span class="inline-code">Content-Type</span> 请求头中设置为 <span class="inline-code">application/json</span>。
+        </p>
+      </div>
+    </div>
+
+    <!-- ======== 生成回复 ======== -->
+    <div class="section" v-show="activeSection === 'generate'" ref="section-generate">
+      <h2 class="section-title"><span class="section-icon">🤖</span> 生成回复</h2>
+      <p class="section-desc">
+        根据差评内容智能生成回复建议，支持三步结构（情绪安抚 → 原因核实 → 补偿方案）。
+      </p>
+
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+          <span class="endpoint endpoint-post">POST</span>
+          <span class="endpoint-path">/api/external/generate</span>
+        </div>
+
+        <h4 style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">请求参数（Request Body）</h4>
+        <table class="prop-table">
+          <thead>
+            <tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="prop-name">reviewContent</td>
+              <td class="prop-type">string</td>
+              <td><span class="badge badge-req">必填</span></td>
+              <td class="prop-desc">差评原文，建议长度不超过 2000 字</td>
+            </tr>
+            <tr>
+              <td class="prop-name">storeName</td>
+              <td class="prop-type">string</td>
+              <td><span class="badge badge-opt">选填</span></td>
+              <td class="prop-desc">店铺名称，用于生成个性化回复</td>
+            </tr>
+            <tr>
+              <td class="prop-name">productName</td>
+              <td class="prop-type">string</td>
+              <td><span class="badge badge-opt">选填</span></td>
+              <td class="prop-desc">商品或服务名称</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h4 style="font-size:13px;font-weight:600;margin:16px 0 8px;color:var(--text-secondary);">响应结构（Response Body）</h4>
+        <table class="prop-table">
+          <thead>
+            <tr><th>字段</th><th>类型</th><th>说明</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="prop-name">reply</td>
+              <td class="prop-type">string</td>
+              <td class="prop-desc">完整回复文本</td>
+            </tr>
+            <tr>
+              <td class="prop-name">steps.comfort</td>
+              <td class="prop-type">string</td>
+              <td class="prop-desc">情绪安抚段落</td>
+            </tr>
+            <tr>
+              <td class="prop-name">steps.verify</td>
+              <td class="prop-type">string</td>
+              <td class="prop-desc">原因核实段落</td>
+            </tr>
+            <tr>
+              <td class="prop-name">steps.compensate</td>
+              <td class="prop-type">string</td>
+              <td class="prop-desc">补偿方案段落</td>
+            </tr>
+            <tr>
+              <td class="prop-name">severity</td>
+              <td class="prop-type">string</td>
+              <td class="prop-desc">严重程度：<span class="inline-code">light</span> / <span class="inline-code">moderate</span> / <span class="inline-code">severe</span></td>
+            </tr>
+            <tr>
+              <td class="prop-name">source</td>
+              <td class="prop-type">string</td>
+              <td class="prop-desc">来源：<span class="inline-code">ai</span>（AI 生成）或 <span class="inline-code">template</span>（模板匹配）</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- curl 示例 -->
+      <h3 style="font-size:15px;font-weight:600;margin:20px 0 10px;">cURL 示例</h3>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">Bash</span>
+          <button class="btn-copy" @click="copyCode('curl-gen')" :class="{ copied: copiedCode === 'curl-gen' }">{{ copiedCode === 'curl-gen' ? '已复制' : '复制' }}</button>
+        </div>
+        <pre class="code-content" id="curl-gen">curl -X POST http://localhost:3002/api/external/generate \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-api-key-here" \
+  -d '{
+    "reviewContent": "菜量太少，价格太贵，服务态度很差，不会再来了。",
+    "storeName": "老王川菜馆",
+    "productName": "麻辣烫"
+  }'</pre>
+      </div>
+
+      <!-- JavaScript 示例 -->
+      <h3 style="font-size:15px;font-weight:600;margin:20px 0 10px;">JavaScript (fetch) 示例</h3>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">JavaScript</span>
+          <button class="btn-copy" @click="copyCode('js-gen')" :class="{ copied: copiedCode === 'js-gen' }">{{ copiedCode === 'js-gen' ? '已复制' : '复制' }}</button>
+        </div>
+        <pre class="code-content" id="js-gen">// 使用 API Key 认证
+const response = await fetch('http://localhost:3002/api/external/generate', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'X-API-Key': 'your-api-key-here'
+  },
+  body: JSON.stringify({
+    reviewContent: '菜量太少，价格太贵，服务态度很差，不会再来了。',
+    storeName: '老王川菜馆',
+    productName: '麻辣烫'
+  })
+})
+
+const data = await response.json()
+console.log(data.reply)
+// 输出结构：
+// {
+//   "reply": "完整的回复文本...",
+//   "steps": {
+//     "comfort": "情绪安抚内容...",
+//     "verify": "原因核实内容...",
+//     "compensate": "补偿方案内容..."
+//   },
+//   "severity": "severe",
+//   "source": "ai"
+// }</pre>
+      </div>
+    </div>
+
+    <!-- ======== 查看历史 ======== -->
+    <div class="section" v-show="activeSection === 'history'" ref="section-history">
+      <h2 class="section-title"><span class="section-icon">📋</span> 查看历史</h2>
+      <p class="section-desc">分页查询商家的差评回复历史记录。</p>
+
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+          <span class="endpoint endpoint-get">GET</span>
+          <span class="endpoint-path">/api/external/history</span>
+        </div>
+
+        <h4 style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">查询参数（Query Parameters）</h4>
+        <table class="prop-table">
+          <thead>
+            <tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="prop-name">page</td>
+              <td class="prop-type">number</td>
+              <td><span class="badge badge-opt">选填</span></td>
+              <td class="prop-desc">页码，默认值为 <span class="inline-code">1</span></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h4 style="font-size:13px;font-weight:600;margin:16px 0 8px;color:var(--text-secondary);">响应结构（Response Body）</h4>
+        <table class="prop-table">
+          <thead>
+            <tr><th>字段</th><th>类型</th><th>说明</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="prop-name">items</td>
+              <td class="prop-type">array</td>
+              <td class="prop-desc">历史记录列表</td>
+            </tr>
+            <tr>
+              <td class="prop-name">total</td>
+              <td class="prop-type">number</td>
+              <td class="prop-desc">总记录数</td>
+            </tr>
+            <tr>
+              <td class="prop-name">page</td>
+              <td class="prop-type">number</td>
+              <td class="prop-desc">当前页码</td>
+            </tr>
+            <tr>
+              <td class="prop-name">totalPages</td>
+              <td class="prop-type">number</td>
+              <td class="prop-desc">总页数</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 style="font-size:15px;font-weight:600;margin:20px 0 10px;">cURL 示例</h3>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">Bash</span>
+          <button class="btn-copy" @click="copyCode('curl-history')" :class="{ copied: copiedCode === 'curl-history' }">{{ copiedCode === 'curl-history' ? '已复制' : '复制' }}</button>
+        </div>
+        <pre class="code-content" id="curl-history">curl "http://localhost:3002/api/external/history?page=1" \
+  -H "X-API-Key: your-api-key-here"</pre>
+      </div>
+
+      <h3 style="font-size:15px;font-weight:600;margin:20px 0 10px;">JavaScript (fetch) 示例</h3>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">JavaScript</span>
+          <button class="btn-copy" @click="copyCode('js-history')" :class="{ copied: copiedCode === 'js-history' }">{{ copiedCode === 'js-history' ? '已复制' : '复制' }}</button>
+        </div>
+        <pre class="code-content" id="js-history">const response = await fetch('http://localhost:3002/api/external/history?page=1', {
+  headers: {
+    'X-API-Key': 'your-api-key-here'
+  }
+})
+
+const data = await response.json()
+console.log(data)
+// 输出结构：
+// {
+//   "items": [
+//     {
+//       "id": 1,
+//       "review_content": "菜量太少...",
+//       "generated_reply": "完整的回复...",
+//       "severity": "severe",
+//       "source": "ai",
+//       "created_at": "2026-05-19 10:30:00"
+//     }
+//   ],
+//   "total": 42,
+//   "page": 1,
+//   "totalPages": 5
+// }</pre>
+      </div>
+    </div>
+
+    <!-- ======== 套餐信息 ======== -->
+    <div class="section" v-show="activeSection === 'plan'" ref="section-plan">
+      <h2 class="section-title"><span class="section-icon">📦</span> 套餐信息</h2>
+      <p class="section-desc">查询当前商家的套餐状态、使用额度和可选套餐列表。此接口需要 JWT 认证。</p>
+
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+          <span class="endpoint endpoint-get">GET</span>
+          <span class="endpoint-path">/api/plan/info</span>
+        </div>
+
+        <div class="auth-card" style="margin-bottom:16px;">
+          <div class="auth-icon">🛡️</div>
+          <div class="auth-content">
+            <div class="auth-name">JWT 认证要求</div>
+            <div class="auth-header">Authorization: Bearer &lt;token&gt;</div>
+          </div>
+        </div>
+
+        <h4 style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">响应结构（Response Body）</h4>
+        <table class="prop-table">
+          <thead>
+            <tr><th>字段</th><th>类型</th><th>说明</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="prop-name">currentPlan</td>
+              <td class="prop-type">string</td>
+              <td class="prop-desc">当前套餐：<span class="inline-code">free</span> / <span class="inline-code">pro</span> / <span class="inline-code">enterprise</span></td>
+            </tr>
+            <tr>
+              <td class="prop-name">usedThisMonth</td>
+              <td class="prop-type">number</td>
+              <td class="prop-desc">本月已使用次数</td>
+            </tr>
+            <tr>
+              <td class="prop-name">monthlyLimit</td>
+              <td class="prop-type">number</td>
+              <td class="prop-desc">每月额度上限</td>
+            </tr>
+            <tr>
+              <td class="prop-name">availablePlans</td>
+              <td class="prop-type">array</td>
+              <td class="prop-desc">可选套餐列表</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 style="font-size:15px;font-weight:600;margin:20px 0 10px;">cURL 示例</h3>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">Bash</span>
+          <button class="btn-copy" @click="copyCode('curl-plan')" :class="{ copied: copiedCode === 'curl-plan' }">{{ copiedCode === 'curl-plan' ? '已复制' : '复制' }}</button>
+        </div>
+        <pre class="code-content" id="curl-plan">curl http://localhost:3002/api/plan/info \
+  -H "Authorization: Bearer your-jwt-token"</pre>
+      </div>
+    </div>
+
+    <!-- ======== 错误码 ======== -->
+    <div class="section" v-show="activeSection === 'errors'" ref="section-errors">
+      <h2 class="section-title"><span class="section-icon">⚠️</span> 错误码</h2>
+      <p class="section-desc">
+        API 使用标准的 HTTP 状态码表示请求结果。发生错误时，响应体将包含 <span class="inline-code">error</span> 字段说明具体原因。
+      </p>
+
+      <div class="error-grid">
+        <div class="error-card">
+          <div class="error-code error-code-4xx">400</div>
+          <div class="error-info">
+            <div class="error-name">参数错误</div>
+            <div class="error-desc">请求参数缺失或格式不正确，请检查请求体</div>
+          </div>
+        </div>
+        <div class="error-card">
+          <div class="error-code error-code-4xx">401</div>
+          <div class="error-info">
+            <div class="error-name">认证失败</div>
+            <div class="error-desc">Token 无效、过期或 API Key 错误</div>
+          </div>
+        </div>
+        <div class="error-card">
+          <div class="error-code error-code-4xx">404</div>
+          <div class="error-info">
+            <div class="error-name">资源不存在</div>
+            <div class="error-desc">请求的资源或接口路径不存在</div>
+          </div>
+        </div>
+        <div class="error-card">
+          <div class="error-code error-code-4xx">409</div>
+          <div class="error-info">
+            <div class="error-name">资源冲突</div>
+            <div class="error-desc">资源已存在或状态冲突（如重复注册）</div>
+          </div>
+        </div>
+        <div class="error-card">
+          <div class="error-code error-code-4xx">429</div>
+          <div class="error-info">
+            <div class="error-name">额度不足</div>
+            <div class="error-desc">本月使用额度已用完，请升级套餐或等待下月重置</div>
+          </div>
+        </div>
+        <div class="error-card">
+          <div class="error-code error-code-5xx">500</div>
+          <div class="error-info">
+            <div class="error-name">服务器错误</div>
+            <div class="error-desc">服务器内部异常，请稍后重试</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:20px;">
+        <h4 style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">错误响应格式</h4>
+        <div class="code-block" style="margin:0;">
+          <div class="code-header">
+            <span class="code-lang">JSON</span>
+            <button class="btn-copy" @click="copyCode('err-example')" :class="{ copied: copiedCode === 'err-example' }">{{ copiedCode === 'err-example' ? '已复制' : '复制' }}</button>
+          </div>
+          <pre class="code-content" id="err-example">{
+  "error": "认证失败，请检查 API Key 或 Token"
+}</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast success" v-if="toast">{{ toast }}</div>
+</div>
+
+<script>
+const { createApp, ref } = Vue
+
+createApp({
+  setup() {
+    const activeSection = ref('auth')
+    const toast = ref('')
+    const copiedCode = ref('')
+    let toastTimer = null
+
+    function showToast(msg) {
+      toast.value = msg
+      if (toastTimer) clearTimeout(toastTimer)
+      toastTimer = setTimeout(() => { toast.value = '' }, 2000)
+    }
+
+    function copyCode(id) {
+      const el = document.getElementById(id)
+      if (!el) return
+      const text = el.textContent.trim()
+      navigator.clipboard.writeText(text).then(() => {
+        copiedCode.value = id
+        showToast('✅ 已复制到剪贴板')
+        setTimeout(() => { copiedCode.value = '' }, 2000)
+      }).catch(() => {
+        // Fallback using textarea
+        const textarea = document.createElement('textarea')
+        textarea.value = text
+        textarea.style.position = 'fixed'
+        textarea.style.opacity = '0'
+        document.body.appendChild(textarea)
+        textarea.select()
+        document.execCommand('copy')
+        document.body.removeChild(textarea)
+        copiedCode.value = id
+        showToast('✅ 已复制到剪贴板')
+        setTimeout(() => { copiedCode.value = '' }, 2000)
+      })
+    }
+
+    return { activeSection, toast, copiedCode, copyCode }
+  }
+}).mount('#app')
+</script>
+</body>
+</html>
