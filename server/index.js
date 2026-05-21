@@ -42,8 +42,9 @@ app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date().t
 
 // Debug: env check
 app.get('/api/debug', (req, res) => {
+  const cfg = require('./config')
   res.json({
-    DEEPSEEK: process.env.DEEPSEEK_API_KEY ? 'SET (' + process.env.DEEPSEEK_API_KEY.slice(0,8) + '...)' : 'NOT SET',
+    DEEPSEEK: process.env.DEEPSEEK_API_KEY ? 'SET (' + process.env.DEEPSEEK_API_KEY.slice(0,8) + '...)' : 'using config.js fallback',
     NODE_ENV: process.env.NODE_ENV || 'not set',
     PORT: process.env.PORT,
   })

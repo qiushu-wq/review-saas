@@ -48,7 +48,8 @@ function buildSystemPrompt(options) {
 
 // ─── DeepSeek API ──────────────────────────────
 async function generateWithDeepSeek(reviewContent, storeName, productName, options) {
-  const apiKey = process.env.DEEPSEEK_API_KEY
+  const { deepseekApiKey } = require('../config')
+  const apiKey = process.env.DEEPSEEK_API_KEY || deepseekApiKey
   if (!apiKey) return null
 
   try {
