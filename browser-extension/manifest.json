@@ -4,6 +4,9 @@
   "version": "1.0.0",
   "description": "AI 自动生成差评回复，粘贴即用。支持美团、淘宝、饿了么、大众点评等平台。",
   "permissions": ["storage"],
+  "background": {
+    "service_worker": "background/background.js"
+  },
   "host_permissions": ["https://web-production-3fdc6.up.railway.app/*"],
   "action": {
     "default_popup": "popup/popup.html",

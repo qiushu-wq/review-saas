@@ -86,19 +86,20 @@
       const industry = container.querySelector('#zp-industry').value
       const tone = container.querySelector('#zp-tone').value
 
-      const res = await fetch('https://web-production-3fdc6.up.railway.app/api/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-        },
-        body: JSON.stringify({ reviewContent: review, industry, tone }),
-      })
-
-      if (!res.ok) { const err = await res.json(); throw new Error(err.error || '生成失败') }
-      const data = await res.json()
-      replyText.textContent = data.reply || data.fullText || ''
-      result.style.display = 'block'
+      chrome.runtime.sendMessage(
+        { type: 'generate', reviewContent: review, industry, tone, apiKey },
+        (response) => {
+          loading.style.display = 'none'
+          generateBtn.disabled = false
+          if (response.ok) {
+            replyText.textContent = response.data.reply || response.data.fullText || ''
+            result.style.display = 'block'
+          } else {
+            replyText.textContent = '❌ ' + response.error
+            result.style.display = 'block'
+          }
+        }
+      )
     } catch (e) {
       replyText.textContent = '❌ ' + e.message
       result.style.display = 'block'
