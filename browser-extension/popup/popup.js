@@ -59,7 +59,7 @@ generateBtn.addEventListener('click', async () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + data.apiKey,
+          'x-api-key': data.apiKey,
         },
         body: JSON.stringify({
           reviewContent: review,
