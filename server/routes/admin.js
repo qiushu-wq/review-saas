@@ -90,4 +90,54 @@ router.get('/admin/stats', adminAuth, (req, res) => {
   }
 })
 
+// GET /api/admin/plan-requests — pending upgrade requests
+router.get('/admin/plan-requests', adminAuth, (req, res) => {
+  try {
+    const requests = dbAll(`
+      SELECT pr.*, m.email, m.store_name, m.plan as current_plan
+      FROM plan_requests pr
+      JOIN merchants m ON m.id = pr.merchant_id
+      ORDER BY pr.created_at DESC
+    `)
+    res.json(requests)
+  } catch (err) {
+    console.error('[Admin PlanRequests] Error:', err.message)
+    res.status(500).json({ error: '获取升级请求失败' })
+  }
+})
+
+// POST /api/admin/plan-requests/:id/approve — approve upgrade
+router.post('/admin/plan-requests/:id/approve', adminAuth, (req, res) => {
+  try {
+    const reqRecord = dbGet('SELECT * FROM plan_requests WHERE id = ?', [req.params.id])
+    if (!reqRecord) return res.status(404).json({ error: '请求不存在' })
+    if (reqRecord.status !== 'pending') return res.status(400).json({ error: '该请求已被处理' })
+
+    const plan = reqRecord.to_plan
+    const monthlyLimit = PLAN_LIMITS[plan]
+    dbRun('UPDATE merchants SET plan = ?, monthly_limit = ? WHERE id = ?', [plan, monthlyLimit, reqRecord.merchant_id])
+    dbRun('UPDATE plan_requests SET status = ? WHERE id = ?', ['approved', req.params.id])
+
+    res.json({ message: '升级已批准' })
+  } catch (err) {
+    console.error('[Admin Approve] Error:', err.message)
+    res.status(500).json({ error: '批准失败' })
+  }
+})
+
+// POST /api/admin/plan-requests/:id/reject — reject upgrade
+router.post('/admin/plan-requests/:id/reject', adminAuth, (req, res) => {
+  try {
+    const reqRecord = dbGet('SELECT * FROM plan_requests WHERE id = ?', [req.params.id])
+    if (!reqRecord) return res.status(404).json({ error: '请求不存在' })
+    if (reqRecord.status !== 'pending') return res.status(400).json({ error: '该请求已被处理' })
+
+    dbRun('UPDATE plan_requests SET status = ? WHERE id = ?', ['rejected', req.params.id])
+    res.json({ message: '已拒绝' })
+  } catch (err) {
+    console.error('[Admin Reject] Error:', err.message)
+    res.status(500).json({ error: '操作失败' })
+  }
+})
+
 module.exports = router

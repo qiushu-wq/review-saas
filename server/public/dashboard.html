@@ -1117,7 +1117,12 @@ createApp({
     }
 
     function contactSales() {
-      showToast('📧 请联系商务团队：sales@example.com')
+      const wx = 'liu147852012'
+      navigator.clipboard.writeText(wx).then(() => {
+        showToast('✅ 微信号 ' + wx + ' 已复制，请打开微信搜索添加')
+      }).catch(() => {
+        showToast('📱 商务微信：' + wx)
+      })
     }
 
     // ============== Onboarding ==============

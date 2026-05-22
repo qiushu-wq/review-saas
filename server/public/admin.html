@@ -180,6 +180,7 @@ select.form-input { appearance: auto; }
       <div class="sidebar-nav">
         <button class="nav-item" :class="{active: tab === 'merchants'}" @click="tab = 'merchants'">🏪 <span>商家列表</span></button>
         <button class="nav-item" :class="{active: tab === 'stats'}" @click="tab = 'stats'">📈 <span>系统统计</span></button>
+        <button class="nav-item" :class="{active: tab === 'payments'}" @click="tab = 'payments'">💳 <span>升级请求</span></button>
       </div>
       <div class="sidebar-nav" style="border-top:1px solid rgba(255,255,255,0.1);">
         <button class="nav-item" @click="doLogout">🚪 <span>退出</span></button>
@@ -317,6 +318,59 @@ select.form-input { appearance: auto; }
           </div>
         </div>
       </div>
+
+      <!-- Tab: Payments -->
+      <div v-if="tab === 'payments'">
+        <div class="card-header">
+          <h2 class="page-title" style="margin-bottom:0;">💳 升级请求</h2>
+          <button class="btn btn-ghost btn-sm" @click="fetchPlanRequests">🔄 刷新</button>
+        </div>
+        <div class="card">
+          <div class="table-wrapper">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>商家 ID</th>
+                  <th>邮箱</th>
+                  <th>店铺名称</th>
+                  <th>当前套餐</th>
+                  <th></th>
+                  <th>目标套餐</th>
+                  <th>提交时间</th>
+                  <th>状态</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-if="planRequests.length === 0">
+                  <td colspan="9" style="text-align:center;padding:40px;color:var(--text-secondary);">暂无升级请求</td>
+                </tr>
+                <tr v-for="r in planRequests" :key="r.id">
+                  <td>{{ r.merchant_id }}</td>
+                  <td>{{ r.email }}</td>
+                  <td>{{ r.store_name || '-' }}</td>
+                  <td><span class="plan-tag" :class="planTagClass(r.from_plan)">{{ planLabel(r.from_plan) }}</span></td>
+                  <td style="text-align:center;">→</td>
+                  <td><span class="plan-tag" :class="planTagClass(r.to_plan)">{{ planLabel(r.to_plan) }}</span></td>
+                  <td>{{ formatDate(r.created_at) }}</td>
+                  <td>
+                    <span v-if="r.status === 'pending'" style="color:var(--warning);font-weight:600;">待审核</span>
+                    <span v-else-if="r.status === 'approved'" style="color:var(--success);font-weight:600;">已批准</span>
+                    <span v-else-if="r.status === 'rejected'" style="color:var(--danger);font-weight:600;">已拒绝</span>
+                    <span v-else>{{ r.status }}</span>
+                  </td>
+                  <td>
+                    <template v-if="r.status === 'pending'">
+                      <button class="btn btn-primary btn-sm" style="margin-right:6px;" @click="approveRequest(r.id)">批准</button>
+                      <button class="btn btn-danger btn-sm" @click="rejectRequest(r.id)">拒绝</button>
+                    </template>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Edit Modal -->
@@ -379,6 +433,7 @@ createApp({
       tab: 'merchants',
       searchQuery: '',
       merchants: [],
+      planRequests: [],
       stats: { totalMerchants: 0, totalRepliesThisMonth: 0, plansDistribution: {}, merchantsByType: {} },
       totalRepliesAll: 0,
       editModal: {
@@ -458,7 +513,7 @@ createApp({
       localStorage.removeItem('adminKey')
     },
     async loadData() {
-      await Promise.all([this.refreshMerchants(), this.refreshStats()])
+      await Promise.all([this.refreshMerchants(), this.refreshStats(), this.fetchPlanRequests()])
     },
     async refreshMerchants() {
       const data = await this.api('/api/admin/merchants')
@@ -469,6 +524,28 @@ createApp({
       if (data) {
         this.stats = data
         this.totalRepliesAll = this.merchants.reduce((sum, m) => sum + (m.reply_count || 0), 0)
+      }
+    },
+    async fetchPlanRequests() {
+      const data = await this.api('/api/admin/plan-requests')
+      if (data) this.planRequests = data
+    },
+    async approveRequest(id) {
+      const data = await this.api(`/api/admin/plan-requests/${id}/approve`, { method: 'POST' })
+      if (data && !data.error) {
+        this.showToast('success', '升级请求已批准')
+        await this.fetchPlanRequests()
+      } else {
+        this.showToast('error', data?.error || '操作失败')
+      }
+    },
+    async rejectRequest(id) {
+      const data = await this.api(`/api/admin/plan-requests/${id}/reject`, { method: 'POST' })
+      if (data && !data.error) {
+        this.showToast('success', '升级请求已拒绝')
+        await this.fetchPlanRequests()
+      } else {
+        this.showToast('error', data?.error || '操作失败')
       }
     },
     onSearch() { /* computed property handles filtering */ },
