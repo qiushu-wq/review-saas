@@ -35,6 +35,7 @@ function runMigrations() {
   const migrations = [
     "ALTER TABLE merchants ADD COLUMN onboarding_done INTEGER DEFAULT 0",
     "ALTER TABLE merchants ADD COLUMN trial_started_at TEXT",
+    "ALTER TABLE merchants ADD COLUMN last_checked_at TEXT",
   ]
   for (const sql of migrations) {
     try { db.exec(sql); console.log('  [DB] Migration applied:', sql.slice(0, 60)) }

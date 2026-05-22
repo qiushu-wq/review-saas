@@ -158,6 +158,7 @@ select.form-input { appearance: auto; }
       <button class="nav-item" :class="{active: view === 'generate'}" @click="switchView('generate')">🤖 <span>生成回复</span></button>
       <button class="nav-item" :class="{active: view === 'history'}" @click="switchView('history')">📋 <span>历史记录</span></button>
       <button class="nav-item" :class="{active: view === 'settings'}" @click="switchView('settings')">⚙️ <span>设置</span></button>
+      <button class="nav-item" :class="{active: view === 'monitor'}" @click="switchView('monitor')">📡 <span>评论监控</span></button>
       <div class="nav-divider"></div>
       <button class="nav-item" :class="{active: view === 'api-keys'}" @click="switchView('api-keys')">🔑 <span>API 密钥</span></button>
       <button class="nav-item" :class="{active: view === 'embed'}" @click="switchView('embed')">🌐 <span>嵌入设置</span></button>
@@ -594,6 +595,128 @@ select.form-input { appearance: auto; }
         </div>
       </div>
     </div>
+
+    <!-- Monitor View -->
+    <div v-if="loggedIn && view === 'monitor'">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+        <h2 class="page-title" style="margin-bottom:0;">📡 评论监控</h2>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <span v-if="monitorStats.lastCheckedAt" style="font-size:13px;color:var(--text-secondary);">上次检查：{{ monitorStats.lastCheckedAt }}</span>
+          <button class="btn btn-outline btn-sm" @click="checkMonitorNow">🔍 检查新评论</button>
+          <button class="btn btn-primary btn-sm" @click="showMonitorModal = true">+ 添加评论</button>
+        </div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="card stat-card">
+          <div class="stat-value">{{ monitorStats.pendingCount }}</div>
+          <div class="stat-label">待回复</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-value">{{ monitorStats.repliedCount }}</div>
+          <div class="stat-label">已回复</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-value">{{ monitorStats.totalCount }}</div>
+          <div class="stat-label">评论总数</div>
+        </div>
+      </div>
+
+      <div class="filter-bar">
+        <select class="form-input" v-model="monitorFilter.platform" @change="onMonitorFilter">
+          <option value="">全部平台</option>
+          <option value="美团">美团</option>
+          <option value="饿了么">饿了么</option>
+          <option value="淘宝">淘宝</option>
+          <option value="京东">京东</option>
+          <option value="抖音">抖音</option>
+          <option value="大众点评">大众点评</option>
+          <option value="其他">其他</option>
+        </select>
+        <select class="form-input" v-model="monitorFilter.status" @change="onMonitorFilter">
+          <option value="">全部状态</option>
+          <option value="pending">待回复</option>
+          <option value="replied">已回复</option>
+        </select>
+      </div>
+
+      <div class="card" v-if="monitorReviews.length === 0">
+        <div class="empty-state">
+          <div class="empty-icon">📭</div>
+          <p>暂无评论</p>
+        </div>
+      </div>
+
+      <div class="card" v-else style="overflow-x:auto;">
+        <table class="table">
+          <thead><tr>
+            <th>平台</th><th>评论内容</th><th>严重程度</th><th>状态</th><th>时间</th><th>操作</th>
+          </tr></thead>
+          <tbody>
+            <tr v-for="item in monitorReviews" :key="item.id">
+              <td><span class="severity-tag" style="background:#e8f5e9;color:#2e7d32;">{{ item.platform }}</span></td>
+              <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ item.review_content }}</td>
+              <td><span class="severity-tag" :class="'severity-' + item.severity">{{ item.severity === 'light' ? '轻度' : item.severity === 'moderate' ? '中度' : '重度' }}</span></td>
+              <td>
+                <span class="severity-tag" :style="{
+                  background: item.status === 'replied' ? '#e8f5e9' : '#fff3e0',
+                  color: item.status === 'replied' ? '#2e7d32' : '#e65100'
+                }">{{ item.status === 'replied' ? '已回复' : '待回复' }}</span>
+              </td>
+              <td style="font-size:13px;color:var(--text-secondary);">{{ item.created_at }}</td>
+              <td>
+                <div class="action-btns">
+                  <button class="btn btn-outline btn-sm" @click="generateMonitorReply(item)" :disabled="item._generating">{{ item._generating ? '生成中...' : '生成回复' }}</button>
+                  <button class="btn btn-primary btn-sm" v-if="item.status !== 'replied'" @click="markMonitorReplied(item.id)">标记已回复</button>
+                  <button class="btn btn-danger btn-sm" @click="deleteMonitorReview(item.id)">删除</button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="pagination" v-if="monitorTotalPages > 1">
+          <button :disabled="monitorPage <= 1" @click="fetchMonitorReviews(monitorPage - 1)">←</button>
+          <span>{{ monitorPage }} / {{ monitorTotalPages }}</span>
+          <button :disabled="monitorPage >= monitorTotalPages" @click="fetchMonitorReviews(monitorPage + 1)">→</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Monitor Review Modal -->
+  <div class="modal-overlay" v-if="showMonitorModal" @click.self="showMonitorModal = false">
+    <div class="modal">
+      <h3 class="modal-title">添加评论</h3>
+      <div class="form-group">
+        <label>评论内容</label>
+        <textarea class="form-input" v-model="monitorNewReview" rows="4" placeholder="请输入评论原文..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>平台</label>
+        <select class="form-input" v-model="monitorNewPlatform">
+          <option value="">请选择平台</option>
+          <option value="美团">美团</option>
+          <option value="饿了么">饿了么</option>
+          <option value="淘宝">淘宝</option>
+          <option value="京东">京东</option>
+          <option value="抖音">抖音</option>
+          <option value="大众点评">大众点评</option>
+          <option value="其他">其他</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>严重程度</label>
+        <select class="form-input" v-model="monitorNewSeverity">
+          <option value="light">轻度</option>
+          <option value="moderate">中度</option>
+          <option value="severe">重度</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:12px;justify-content:flex-end;">
+        <button class="btn btn-outline" @click="showMonitorModal = false">取消</button>
+        <button class="btn btn-primary" @click="addMonitorReview" :disabled="!monitorNewReview.trim() || !monitorNewPlatform">保存</button>
+      </div>
+    </div>
   </div>
 
   <!-- Payment Modal -->
@@ -739,6 +862,18 @@ createApp({
     const onboardingResult = ref(null)
     const onboardingLoading = ref(false)
 
+    // Monitor
+    const monitorReviews = ref([])
+    const monitorStats = reactive({ pendingCount: 0, repliedCount: 0, totalCount: 0, lastCheckedAt: null })
+    const monitorPage = ref(1)
+    const monitorTotalPages = ref(1)
+    const monitorFilter = reactive({ status: '', platform: '' })
+    const showMonitorModal = ref(false)
+    const monitorNewReview = ref('')
+    const monitorNewPlatform = ref('')
+    const monitorNewSeverity = ref('light')
+    let monitorFilterTimer = null
+
     // Usage warning flag (show only once per session)
     let usageEightyPctWarned = false
 
@@ -834,6 +969,9 @@ createApp({
         initEmbed()
       } else if (v === 'plan') {
         fetchPlanInfo()
+      } else if (v === 'monitor') {
+        fetchMonitorStats()
+        fetchMonitorReviews(1)
       }
     }
 
@@ -1159,6 +1297,109 @@ createApp({
       refreshDashboard()
     }
 
+    // ============== Monitor ==============
+
+    async function fetchMonitorStats() {
+      const res = await api('/api/monitor/stats')
+      if (!res.ok) return
+      const data = await res.json()
+      monitorStats.pendingCount = data.pendingCount || 0
+      monitorStats.repliedCount = data.repliedCount || 0
+      monitorStats.totalCount = data.totalCount || 0
+      monitorStats.lastCheckedAt = data.lastCheckedAt || null
+    }
+
+    async function fetchMonitorReviews(page) {
+      monitorPage.value = page || 1
+      let url = '/api/monitor/reviews?page=' + monitorPage.value
+      if (monitorFilter.status) url += '&status=' + monitorFilter.status
+      if (monitorFilter.platform) url += '&platform=' + encodeURIComponent(monitorFilter.platform)
+      const res = await api(url)
+      if (!res.ok) return
+      const data = await res.json()
+      monitorReviews.value = (data.items || []).map(item => ({ ...item, _generating: false }))
+      monitorTotalPages.value = data.totalPages || 1
+    }
+
+    async function addMonitorReview() {
+      if (!monitorNewReview.value.trim() || !monitorNewPlatform.value) return
+      const res = await api('/api/monitor/reviews', {
+        method: 'POST',
+        body: JSON.stringify({
+          reviewContent: monitorNewReview.value,
+          platform: monitorNewPlatform.value,
+          severity: monitorNewSeverity.value,
+        }),
+      })
+      if (!res.ok) { showToast('添加失败', 'error'); return }
+      showMonitorModal.value = false
+      monitorNewReview.value = ''
+      monitorNewPlatform.value = ''
+      monitorNewSeverity.value = 'light'
+      showToast('✅ 评论已添加')
+      await fetchMonitorStats()
+      await fetchMonitorReviews(1)
+    }
+
+    async function markMonitorReplied(id) {
+      const res = await api('/api/monitor/reviews/' + id, {
+        method: 'PUT',
+        body: JSON.stringify({ status: 'replied' }),
+      })
+      if (!res.ok) { showToast('操作失败', 'error'); return }
+      showToast('✅ 已标记为已回复')
+      await fetchMonitorStats()
+      await fetchMonitorReviews(monitorPage.value)
+    }
+
+    async function deleteMonitorReview(id) {
+      if (!confirm('确定要删除这条评论吗？')) return
+      const res = await api('/api/monitor/reviews/' + id, { method: 'DELETE' })
+      if (!res.ok) { showToast('删除失败', 'error'); return }
+      showToast('评论已删除')
+      await fetchMonitorStats()
+      await fetchMonitorReviews(monitorPage.value)
+    }
+
+    function checkMonitorNow() {
+      monitorStats.lastCheckedAt = new Date().toLocaleString('zh-CN')
+      api('/api/me', {
+        method: 'PUT',
+        body: JSON.stringify({ lastCheckedAt: new Date().toISOString() }),
+      })
+      showToast('✅ 已记录检查时间')
+      fetchMonitorStats()
+    }
+
+    function onMonitorFilter() {
+      if (monitorFilterTimer) clearTimeout(monitorFilterTimer)
+      monitorFilterTimer = setTimeout(() => {
+        fetchMonitorReviews(1)
+      }, 400)
+    }
+
+    async function generateMonitorReply(item) {
+      item._generating = true
+      const res = await api('/api/generate', {
+        method: 'POST',
+        body: JSON.stringify({
+          reviewContent: item.review_content,
+          storeName: merchant.storeName || '本店',
+          productName: '',
+        }),
+      })
+      item._generating = false
+      if (!res.ok) { showToast('生成失败，请检查额度', 'error'); return }
+      const data = await res.json()
+      // Auto-save the generated reply
+      await api('/api/monitor/reviews/' + item.id, {
+        method: 'PUT',
+        body: JSON.stringify({ generatedReply: data.reply || data.fullText || '' }),
+      })
+      showToast('✅ 回复已生成并保存')
+      await fetchMonitorReviews(monitorPage.value)
+    }
+
     // ============== Lifecycle ==============
 
     onMounted(() => {
@@ -1195,6 +1436,14 @@ createApp({
 
       // Severity
       severityData,
+
+      // Monitor
+      monitorReviews, monitorStats, monitorPage, monitorTotalPages,
+      monitorFilter, showMonitorModal,
+      monitorNewReview, monitorNewPlatform, monitorNewSeverity,
+      fetchMonitorStats, fetchMonitorReviews, addMonitorReview,
+      markMonitorReplied, deleteMonitorReview, checkMonitorNow,
+      onMonitorFilter, generateMonitorReply,
     }
   }
 }).mount('#app')

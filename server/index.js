@@ -10,6 +10,7 @@ const externalRoutes = require('./routes/external')
 const keyRoutes = require('./routes/keys')
 const embedRoutes = require('./routes/embed')
 const planRoutes = require('./routes/plan')
+const monitorRoutes = require('./routes/monitor')
 const adminRoutes = require('./routes/admin')
 
 const app = express()
@@ -25,6 +26,7 @@ app.use('/api', externalRoutes)
 app.use('/api', keyRoutes)
 app.use('/api', embedRoutes)
 app.use('/api', planRoutes)
+app.use('/api', monitorRoutes)
 
 app.use('/api', adminRoutes)
 

@@ -90,10 +90,15 @@ router.get('/me', authMiddleware, (req, res) => {
 // PUT /api/me
 router.put('/me', authMiddleware, (req, res) => {
   try {
-    const { storeName, storeType } = req.body
-    dbRun('UPDATE merchants SET store_name = ?, store_type = ? WHERE id = ?', [
-      storeName || '', storeType || '', req.merchantId
-    ])
+    const { storeName, storeType, lastCheckedAt } = req.body
+    const updates = []
+    const params = []
+    if (storeName !== undefined) { updates.push('store_name = ?'); params.push(storeName) }
+    if (storeType !== undefined) { updates.push('store_type = ?'); params.push(storeType) }
+    if (lastCheckedAt !== undefined) { updates.push('last_checked_at = ?'); params.push(lastCheckedAt) }
+    if (updates.length === 0) return res.status(400).json({ error: '没有要更新的字段' })
+    params.push(req.merchantId)
+    dbRun(`UPDATE merchants SET ${updates.join(', ')} WHERE id = ?`, params)
     res.json({ message: '更新成功' })
   } catch (err) {
     console.error('[Update] Error:', err.message)

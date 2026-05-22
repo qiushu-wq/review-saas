@@ -48,6 +48,19 @@ CREATE TABLE IF NOT EXISTS embed_config (
   FOREIGN KEY (merchant_id) REFERENCES merchants(id)
 );
 
+CREATE TABLE IF NOT EXISTS review_monitor (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  merchant_id INTEGER NOT NULL,
+  platform TEXT DEFAULT '',
+  review_content TEXT NOT NULL,
+  severity TEXT DEFAULT 'light',
+  status TEXT DEFAULT 'pending',
+  generated_reply TEXT DEFAULT '',
+  created_at TEXT DEFAULT (datetime('now')),
+  replied_at TEXT,
+  FOREIGN KEY (merchant_id) REFERENCES merchants(id)
+);
+
 CREATE TABLE IF NOT EXISTS plan_requests (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   merchant_id INTEGER NOT NULL,
