@@ -61,7 +61,7 @@ async function handleSignup() {
     localStorage.setItem('token', data.token)
     success.value = `🎉 注册成功！欢迎 ${data.merchant.email}`
     email.value = ''; password.value = ''; storeName.value = ''; storeType.value = ''
-    window.open('/dashboard/dashboard.html?onboarding=1', '_blank')
+    window.location.href = '/dashboard/dashboard.html?onboarding=1'
   } catch {
     error.value = '网络错误，请稍后再试'
   } finally {

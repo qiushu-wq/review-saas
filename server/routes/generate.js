@@ -11,13 +11,13 @@ router.post('/demo/generate', async (req, res) => {
   try {
     const { reviewContent, storeName, productName, industry, tone } = req.body
     if (!reviewContent) return res.status(400).json({ error: '请输入差评内容' })
-    const result = generateReply(reviewContent, storeName || '', productName || '', { industry, tone })
+    const result = await generateReplyWithFallback(reviewContent, storeName || '', productName || '', { industry, tone })
     res.json({
       reply: result.fullText,
       steps: result.steps,
       severity: result.severity,
       severityLabel: result.severityLabel,
-      source: 'template',
+      source: result.source || 'template',
     })
   } catch (err) {
     console.error('[Demo Generate] Error:', err.message)

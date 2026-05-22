@@ -16,7 +16,7 @@
           <ul class="pricing-features">
             <li v-for="f in plan.features" :key="f">✓ {{ f }}</li>
           </ul>
-          <button class="btn" :class="plan.highlighted ? 'btn-primary' : 'btn-outline'" style="width:100%;justify-content:center;">
+          <button class="btn" :class="plan.highlighted ? 'btn-primary' : 'btn-outline'" style="width:100%;justify-content:center;" @click="handleCta(plan)">
             {{ plan.cta }}
           </button>
         </div>
@@ -28,6 +28,18 @@
 </template>
 
 <script setup>
+function scrollTo(id) {
+  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
+}
+
+function handleCta(plan) {
+  if (plan.cta === '免费开通' || plan.cta === '立即订阅') {
+    scrollTo('signup')
+  } else if (plan.cta === '联系商务') {
+    alert('请联系商务团队：sales@example.com')
+  }
+}
+
 const plans = [
   {
     name: '免费版', price: 0, period: '月', desc: '适合刚起步的小店',
