@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>智评助手</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div id="app">
+    <div class="header">
+      <h1>✍️ 智评助手</h1>
+      <p class="subtitle">AI 差评回复生成器</p>
+    </div>
+
+    <div class="section" id="settings-section">
+      <label>API 密钥</label>
+      <div class="input-row">
+        <input type="text" id="api-key" placeholder="从智评助手后台获取">
+        <button id="save-key" class="btn-primary">保存</button>
+      </div>
+      <p class="hint">在商家后台「API 密钥」页面创建</p>
+      <p id="key-status" class="status"></p>
+    </div>
+
+    <div class="section">
+      <label>快速生成</label>
+      <textarea id="review-input" rows="3" placeholder="粘贴差评原文..."></textarea>
+      <div class="options-row">
+        <select id="industry">
+          <option value="catering">餐饮</option>
+          <option value="ecommerce">电商</option>
+          <option value="local_service">本地服务</option>
+        </select>
+        <select id="tone">
+          <option value="warm">温暖</option>
+          <option value="professional">专业</option>
+          <option value="concise">简洁</option>
+        </select>
+      </div>
+      <button id="generate-btn" class="btn-primary btn-full" disabled>🤖 生成回复</button>
+      <div id="result" class="result" style="display:none;">
+        <div class="result-text" id="result-text"></div>
+        <button id="copy-btn" class="btn-copy">📋 复制</button>
+      </div>
+      <div id="loading" style="display:none;" class="loading">⏳ 生成中...</div>
+    </div>
+
+    <div class="footer">
+      <a href="https://web-production-3fdc6.up.railway.app" target="_blank">打开后台 →</a>
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
