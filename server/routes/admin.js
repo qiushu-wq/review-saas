@@ -3,7 +3,8 @@ const { dbGet, dbAll, dbRun } = require('../db/init')
 
 const router = Router()
 
-const ADMIN_KEY = process.env.ADMIN_KEY || 'admin123'
+const { adminKey: configAdminKey } = require('../config')
+const ADMIN_KEY = process.env.ADMIN_KEY || configAdminKey || 'admin123'
 
 // Admin key auth middleware
 function adminAuth(req, res, next) {
