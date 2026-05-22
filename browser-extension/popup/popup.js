@@ -73,8 +73,8 @@ generateBtn.addEventListener('click', async () => {
         throw new Error(err.error || '生成失败')
       }
 
-      const data = await res.json()
-      const reply = data.reply || data.fullText || ''
+      const resData = await res.json()
+      const reply = resData.reply || resData.fullText || ''
       resultText.textContent = reply
       result.style.display = 'block'
     } catch (e) {
