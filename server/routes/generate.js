@@ -34,6 +34,15 @@ router.post('/generate', authMiddleware, async (req, res) => {
     const merchant = dbGet('SELECT * FROM merchants WHERE id = ?', [req.merchantId])
     if (!merchant) return res.status(404).json({ error: '商家不存在' })
 
+    // Auto-reset monthly usage if a new month has started
+    const now = new Date()
+    const currentMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0')
+    if (!merchant.reset_date || merchant.reset_date.slice(0, 7) !== currentMonth) {
+      dbRun('UPDATE merchants SET used_this_month = 0, reset_date = ? WHERE id = ?', [now.toISOString().slice(0, 10), req.merchantId])
+      merchant.used_this_month = 0
+      merchant.reset_date = now.toISOString().slice(0, 10)
+    }
+
     if (merchant.used_this_month >= merchant.monthly_limit) {
       return res.status(429).json({ error: '本月使用额度已用完，请升级套餐', plan: merchant.plan })
     }
