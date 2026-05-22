@@ -32,11 +32,13 @@ function scrollTo(id) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
 }
 
-function handleCta(plan) {
+async function handleCta(plan) {
   if (plan.cta === '免费开通' || plan.cta === '立即订阅') {
     scrollTo('signup')
   } else if (plan.cta === '联系商务') {
-    alert('请联系商务团队：sales@example.com')
+    const wx = 'liu147852012'
+    try { await navigator.clipboard.writeText(wx); alert('微信号 ' + wx + ' 已复制，请打开微信搜索添加') }
+    catch { alert('联系商务请加微信：' + wx) }
   }
 }
 
