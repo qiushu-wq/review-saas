@@ -2,33 +2,57 @@
   <section id="signup" class="section signup">
     <div class="container">
       <div class="signup-card card">
-        <h2 class="section-title">开始免费使用</h2>
-        <p class="section-subtitle">注册即享 7 天专业版免费试用，无需信用卡</p>
+        <h2 class="section-title">{{ isLogin ? '欢迎回来' : '开始免费使用' }}</h2>
+        <p class="section-subtitle">{{ isLogin ? '登录后继续管理你的店铺评价' : '注册即享 7 天专业版免费试用，无需信用卡' }}</p>
 
-        <form class="signup-form" @submit.prevent="handleSignup">
-          <div class="form-row">
-            <input v-model="phone" type="tel" placeholder="手机号" class="form-input">
-            <input v-model="email" type="email" placeholder="邮箱（选填）" class="form-input">
-          </div>
-          <div class="form-row">
-            <input v-model="password" type="password" placeholder="密码（至少 6 位）" required class="form-input" minlength="6">
-          </div>
-          <div class="form-row">
-            <input v-model="storeName" placeholder="店铺名称（选填）" class="form-input">
-            <select v-model="storeType" class="form-input">
-              <option value="">店铺类型（选填）</option>
-              <option value="餐饮">餐饮</option>
-              <option value="电商">电商</option>
-              <option value="本地服务">本地服务</option>
-              <option value="其他">其他</option>
-            </select>
-          </div>
+        <form class="signup-form" @submit.prevent="isLogin ? handleLogin() : handleSignup()">
+          <!-- Login form -->
+          <template v-if="isLogin">
+            <div class="form-row">
+              <input v-model="account" type="text" placeholder="手机号 / 邮箱" class="form-input">
+            </div>
+            <div class="form-row">
+              <input v-model="password" type="password" placeholder="密码" required class="form-input">
+            </div>
+          </template>
+
+          <!-- Register form -->
+          <template v-else>
+            <div class="form-row">
+              <input v-model="phone" type="tel" placeholder="手机号" class="form-input">
+              <input v-model="email" type="email" placeholder="邮箱（选填）" class="form-input">
+            </div>
+            <div class="form-row">
+              <input v-model="password" type="password" placeholder="密码（至少 6 位）" required class="form-input" minlength="6">
+            </div>
+            <div class="form-row">
+              <input v-model="storeName" placeholder="店铺名称（选填）" class="form-input">
+              <select v-model="storeType" class="form-input">
+                <option value="">店铺类型（选填）</option>
+                <option value="餐饮">餐饮</option>
+                <option value="电商">电商</option>
+                <option value="本地服务">本地服务</option>
+                <option value="其他">其他</option>
+              </select>
+            </div>
+          </template>
+
           <button type="submit" class="btn btn-primary btn-lg" style="width:100%;justify-content:center;" :disabled="loading">
-            {{ loading ? '注册中...' : '免费注册 →' }}
+            {{ loading ? (isLogin ? '登录中...' : '注册中...') : (isLogin ? '登录 →' : '免费注册 →') }}
           </button>
           <p v-if="error" class="form-error">{{ error }}</p>
           <p v-if="success" class="form-success">{{ success }}</p>
-          <p class="form-note">注册即代表同意《服务协议》和《隐私政策》</p>
+          <p class="form-note">
+            <template v-if="isLogin">
+              还没有账号？
+              <a href="#" @click.prevent="toggleMode" style="color:var(--primary-dark);">免费注册</a>
+            </template>
+            <template v-else>
+              已有账号？
+              <a href="#" @click.prevent="toggleMode" style="color:var(--primary-dark);">去登录</a>
+            </template>
+          </p>
+          <p v-if="!isLogin" class="form-note" style="margin-top:4px;">注册即代表同意《服务协议》和《隐私政策》</p>
         </form>
       </div>
     </div>
@@ -38,6 +62,8 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 
+const isLogin = ref(false)
+const account = ref('')
 const email = ref('')
 const phone = ref('')
 const password = ref('')
@@ -48,11 +74,48 @@ const loading = ref(false)
 const error = ref('')
 const success = ref('')
 
+function toggleMode() {
+  isLogin.value = !isLogin.value
+  error.value = ''
+  success.value = ''
+}
+
 onMounted(() => {
   const params = new URLSearchParams(window.location.search)
   const ref = params.get('ref')
   if (ref) referralCode.value = ref
+  if (params.get('login') === '1') isLogin.value = true
+
+  // Listen for Navbar "登录" click
+  window.addEventListener('signup-mode', (e) => {
+    if (e.detail?.login) isLogin.value = true
+  })
 })
+
+async function handleLogin() {
+  error.value = ''
+  success.value = ''
+  if (!account.value || !password.value) { error.value = '请填写账号和密码'; return }
+
+  loading.value = true
+  try {
+    const res = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ account: account.value, password: password.value }),
+    })
+    const data = await res.json()
+    if (!res.ok) { error.value = data.error || '登录失败'; return }
+    localStorage.setItem('token', data.token)
+    account.value = ''
+    password.value = ''
+    window.location.href = '/dashboard/dashboard.html'
+  } catch {
+    error.value = '网络错误，请稍后再试'
+  } finally {
+    loading.value = false
+  }
+}
 
 async function handleSignup() {
   error.value = ''
@@ -77,8 +140,8 @@ async function handleSignup() {
     const data = await res.json()
     if (!res.ok) { error.value = data.error || '注册失败'; return }
     localStorage.setItem('token', data.token)
-    success.value = `🎉 注册成功！欢迎 ${data.merchant.email}`
-    email.value = ''; password.value = ''; storeName.value = ''; storeType.value = ''
+    success.value = `🎉 注册成功！欢迎 ${data.merchant.email || data.merchant.phone}`
+    email.value = ''; phone.value = ''; password.value = ''; storeName.value = ''; storeType.value = ''
     window.location.href = '/dashboard/dashboard.html?onboarding=1'
   } catch {
     error.value = '网络错误，请稍后再试'

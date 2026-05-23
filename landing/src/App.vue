@@ -17,10 +17,18 @@
 </template>
 
 <script setup>
+import { onMounted } from 'vue'
 import Navbar from './components/Navbar.vue'
 import Hero from './components/Hero.vue'
 import Demo from './components/Demo.vue'
 import Features from './components/Features.vue'
 import Pricing from './components/Pricing.vue'
 import Signup from './components/Signup.vue'
+
+onMounted(() => {
+  // Already logged in → go straight to dashboard
+  if (localStorage.getItem('token')) {
+    window.location.href = '/dashboard/dashboard.html'
+  }
+})
 </script>

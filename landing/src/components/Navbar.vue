@@ -5,7 +5,8 @@
       <div class="nav-links">
         <a href="#demo" @click.prevent="scrollTo('demo')">在线体验</a>
         <a href="#pricing" @click.prevent="scrollTo('pricing')">定价</a>
-        <a href="#signup" class="btn btn-primary btn-sm" @click.prevent="scrollTo('signup')">免费使用</a>
+        <a href="#signup" @click.prevent="goSignup">登录</a>
+        <a href="#signup" class="btn btn-primary btn-sm" @click.prevent="goSignup">免费使用</a>
       </div>
     </div>
   </nav>
@@ -14,6 +15,18 @@
 <script setup>
 function scrollTo(id) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
+}
+
+function goSignup() {
+  scrollTo('signup')
+  // Switch to login mode if "登录" was clicked
+  setTimeout(() => {
+    const el = document.getElementById('signup')
+    if (el && el.__vue_app__) {
+      // Emit custom event for Signup component to toggle to login mode
+      window.dispatchEvent(new CustomEvent('signup-mode', { detail: { login: true } }))
+    }
+  }, 500)
 }
 </script>
 
