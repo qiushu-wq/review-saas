@@ -1,6 +1,7 @@
 CREATE TABLE IF NOT EXISTS merchants (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  email TEXT UNIQUE NOT NULL,
+  email TEXT UNIQUE,
+  phone TEXT UNIQUE,
   password_hash TEXT NOT NULL,
   store_name TEXT DEFAULT '',
   store_type TEXT DEFAULT '',
@@ -10,7 +11,21 @@ CREATE TABLE IF NOT EXISTS merchants (
   used_this_month INTEGER DEFAULT 0,
   reset_date TEXT,
   onboarding_done INTEGER DEFAULT 0,
-  trial_started_at TEXT
+  trial_started_at TEXT,
+  referral_code TEXT UNIQUE,
+  referred_by INTEGER,
+  bonus_monthly INTEGER DEFAULT 0,
+  FOREIGN KEY (referred_by) REFERENCES merchants(id)
+);
+
+CREATE TABLE IF NOT EXISTS referral_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  referrer_id INTEGER NOT NULL,
+  referred_id INTEGER NOT NULL,
+  bonus_amount INTEGER DEFAULT 10,
+  created_at TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (referrer_id) REFERENCES merchants(id),
+  FOREIGN KEY (referred_id) REFERENCES merchants(id)
 );
 
 CREATE TABLE IF NOT EXISTS reply_history (
@@ -33,17 +48,6 @@ CREATE TABLE IF NOT EXISTS api_keys (
   key_value TEXT UNIQUE NOT NULL,
   is_active INTEGER DEFAULT 1,
   last_used_at TEXT,
-  created_at TEXT DEFAULT (datetime('now')),
-  FOREIGN KEY (merchant_id) REFERENCES merchants(id)
-);
-
-CREATE TABLE IF NOT EXISTS embed_config (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  merchant_id INTEGER UNIQUE NOT NULL,
-  widget_title TEXT DEFAULT '智评助手',
-  theme_color TEXT DEFAULT '#FFB74D',
-  position TEXT DEFAULT 'right',
-  is_active INTEGER DEFAULT 1,
   created_at TEXT DEFAULT (datetime('now')),
   FOREIGN KEY (merchant_id) REFERENCES merchants(id)
 );

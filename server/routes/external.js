@@ -1,12 +1,12 @@
 const { Router } = require('express')
 const { dbGet, dbAll, dbRun } = require('../db/init')
-const { apiAuthMiddleware } = require('../middleware/api-auth')
+const { authMiddleware } = require('../middleware/auth')
 const { generateReplyWithFallback } = require('../lib/ai-service')
 
 const router = Router()
 
 // POST /api/external/generate
-router.post('/external/generate', apiAuthMiddleware, async (req, res) => {
+router.post('/external/generate', authMiddleware, async (req, res) => {
   try {
     const { reviewContent, storeName, productName } = req.body
     if (!reviewContent) return res.status(400).json({ error: '请输入差评内容' })
@@ -33,7 +33,7 @@ router.post('/external/generate', apiAuthMiddleware, async (req, res) => {
 })
 
 // GET /api/external/history
-router.get('/external/history', apiAuthMiddleware, (req, res) => {
+router.get('/external/history', authMiddleware, (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1
     const limit = 20

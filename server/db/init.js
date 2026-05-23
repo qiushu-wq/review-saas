@@ -36,10 +36,55 @@ function runMigrations() {
     "ALTER TABLE merchants ADD COLUMN onboarding_done INTEGER DEFAULT 0",
     "ALTER TABLE merchants ADD COLUMN trial_started_at TEXT",
     "ALTER TABLE merchants ADD COLUMN last_checked_at TEXT",
+    "ALTER TABLE merchants ADD COLUMN referral_code TEXT",
+    "ALTER TABLE merchants ADD COLUMN referred_by INTEGER",
+    "ALTER TABLE merchants ADD COLUMN bonus_monthly INTEGER DEFAULT 0",
+    "ALTER TABLE merchants ADD COLUMN phone TEXT",
   ]
   for (const sql of migrations) {
     try { db.exec(sql); console.log('  [DB] Migration applied:', sql.slice(0, 60)) }
     catch (e) { /* column may already exist - ignore */ }
+  }
+
+  // Migration: allow NULL email for phone-only registration
+  // SQLite can't DROP NOT NULL via ALTER TABLE, so recreate the table atomically
+  try {
+    // Check if migration already done — new merchants table may not have NOT NULL on email
+    const info = db.exec("PRAGMA table_info(merchants)")
+    const emailCol = info[0]?.values?.find(r => r[1] === 'email')
+    if (emailCol && emailCol[3] === 1) { // 1 = NOT NULL
+      db.exec("BEGIN TRANSACTION")
+      db.exec(`CREATE TABLE merchants_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT UNIQUE,
+        phone TEXT UNIQUE,
+        password_hash TEXT NOT NULL,
+        store_name TEXT DEFAULT '',
+        store_type TEXT DEFAULT '',
+        created_at TEXT DEFAULT (datetime('now')),
+        plan TEXT DEFAULT 'free',
+        monthly_limit INTEGER DEFAULT 50,
+        used_this_month INTEGER DEFAULT 0,
+        reset_date TEXT,
+        onboarding_done INTEGER DEFAULT 0,
+        trial_started_at TEXT,
+        last_checked_at TEXT,
+        referral_code TEXT UNIQUE,
+        referred_by INTEGER,
+        bonus_monthly INTEGER DEFAULT 0,
+        FOREIGN KEY (referred_by) REFERENCES merchants(id)
+      )`)
+      // Use explicit column list to avoid mismatch if columns are later added
+      db.exec(`INSERT INTO merchants_new (id, email, phone, password_hash, store_name, store_type, created_at, plan, monthly_limit, used_this_month, reset_date, onboarding_done, trial_started_at, last_checked_at, referral_code, referred_by, bonus_monthly) SELECT id, email, phone, password_hash, store_name, store_type, created_at, plan, monthly_limit, used_this_month, reset_date, onboarding_done, trial_started_at, last_checked_at, referral_code, referred_by, bonus_monthly FROM merchants`)
+      db.exec("UPDATE merchants_new SET email = NULL WHERE email = ''")
+      db.exec("DROP TABLE merchants")
+      db.exec("ALTER TABLE merchants_new RENAME TO merchants")
+      db.exec("COMMIT")
+      console.log('  [DB] Migration applied: nullable email')
+    }
+  } catch (e) {
+    try { db.exec("ROLLBACK") } catch (_) {}
+    console.log('  [DB] Migration skipped (nullable email):', e.message.slice(0, 100))
   }
 }
 

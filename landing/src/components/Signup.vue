@@ -7,7 +7,10 @@
 
         <form class="signup-form" @submit.prevent="handleSignup">
           <div class="form-row">
-            <input v-model="email" type="email" placeholder="邮箱地址" required class="form-input">
+            <input v-model="phone" type="tel" placeholder="手机号" class="form-input">
+            <input v-model="email" type="email" placeholder="邮箱（选填）" class="form-input">
+          </div>
+          <div class="form-row">
             <input v-model="password" type="password" placeholder="密码（至少 6 位）" required class="form-input" minlength="6">
           </div>
           <div class="form-row">
@@ -33,20 +36,28 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 
 const email = ref('')
+const phone = ref('')
 const password = ref('')
 const storeName = ref('')
 const storeType = ref('')
+const referralCode = ref('')
 const loading = ref(false)
 const error = ref('')
 const success = ref('')
 
+onMounted(() => {
+  const params = new URLSearchParams(window.location.search)
+  const ref = params.get('ref')
+  if (ref) referralCode.value = ref
+})
+
 async function handleSignup() {
   error.value = ''
   success.value = ''
-  if (!email.value || !password.value) { error.value = '请填写邮箱和密码'; return }
+  if ((!email.value && !phone.value) || !password.value) { error.value = '请填写手机号（或邮箱）和密码'; return }
   if (password.value.length < 6) { error.value = '密码至少 6 位'; return }
 
   loading.value = true
@@ -54,7 +65,14 @@ async function handleSignup() {
     const res = await fetch('/api/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email.value, password: password.value, storeName: storeName.value, storeType: storeType.value }),
+      body: JSON.stringify({
+        email: email.value || undefined,
+        phone: phone.value || undefined,
+        password: password.value,
+        storeName: storeName.value,
+        storeType: storeType.value,
+        referralCode: referralCode.value || undefined,
+      }),
     })
     const data = await res.json()
     if (!res.ok) { error.value = data.error || '注册失败'; return }
